@@ -67,21 +67,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("{:-20} {:-10?}", m.name, m.status);
             }
         }
-        Commands::Get { id } => {
-            match api::get_machine_by_id(&id) {
-                Some(m) => println!("{}", m.to_yaml()?),
-                None => println!("No machine found with id='{}'", id), 
-            }
-        }
+        Commands::Get { id } => match api::get_machine_by_id(&id) {
+            Some(m) => println!("{}", m.to_yaml()?),
+            None => println!("No machine found with id='{}'", id),
+        },
         Commands::Delete { id } => {
             api::delete_machine(&id)?;
         }
-        Commands::StartDhcp => { dnsmasq::Dnsmasq::new().start(); },
-        Commands::StopDhcp => { dnsmasq::Dnsmasq::new().stop(); },
-        Commands::RestartDhcp => { 
+        Commands::StartDhcp => {
+            dnsmasq::Dnsmasq::new().start();
+        }
+        Commands::StopDhcp => {
+            dnsmasq::Dnsmasq::new().stop();
+        }
+        Commands::RestartDhcp => {
             dnsmasq::Dnsmasq::new().stop();
             dnsmasq::Dnsmasq::new().start();
-        },
+        }
     }
 
     Ok(())

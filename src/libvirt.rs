@@ -20,9 +20,14 @@ use std::path::Path;
 use crate::error::Error;
 use crate::models;
 
-pub fn define<P: AsRef<Path>>(machine: &models::Machine, image_file: P, bridge_name: &str, macaddr: &str) -> Result<(), Error> {
-
-    let xml = format!(r#"
+pub fn define<P: AsRef<Path>>(
+    machine: &models::Machine,
+    image_file: P,
+    bridge_name: &str,
+    macaddr: &str,
+) -> Result<(), Error> {
+    let xml = format!(
+        r#"
 <domain type='kvm'>
   <name>{name}</name>
   <memory unit="bytes">{memory_bytes}</memory>
@@ -62,12 +67,12 @@ pub fn define<P: AsRef<Path>>(machine: &models::Machine, image_file: P, bridge_n
   </devices>
 </domain>
     "#,
-        name=&machine.name,
-        memory_bytes=crate::models::to_size(&machine.spec.memory)?,
-        cpus=machine.spec.cpu,
-        image_file=image_file.as_ref().to_str().unwrap(),
-        management_bridge=bridge_name,
-        macaddr=macaddr
+        name = &machine.name,
+        memory_bytes = crate::models::to_size(&machine.spec.memory)?,
+        cpus = machine.spec.cpu,
+        image_file = image_file.as_ref().to_str().unwrap(),
+        management_bridge = bridge_name,
+        macaddr = macaddr
     );
 
     use virt::{connect::Connect, domain::Domain};

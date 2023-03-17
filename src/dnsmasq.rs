@@ -15,13 +15,12 @@
 //  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
 //  USA
 
-use std::path::{PathBuf, Path};
-use std::process::Command;
 use std::io::Read;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 
-use tracing::debug;
 use libc;
-
+use tracing::debug;
 
 pub struct Dnsmasq {
     path: PathBuf,
@@ -31,7 +30,7 @@ impl Dnsmasq {
     pub fn new() -> Self {
         let path = Path::new("/var/lib/bigiron/dnsmasq");
 
-        let s = Self{
+        let s = Self {
             path: path.to_path_buf(),
         };
 
@@ -55,13 +54,16 @@ impl Dnsmasq {
     }
 
     pub fn start(&self) {
-        let mut cmd = Command::new("/usr/sbin/dnsmasq"); 
+        let mut cmd = Command::new("/usr/sbin/dnsmasq");
         let confpath = self.path.join("conf");
 
         cmd.arg("--strict-order");
         cmd.arg("--bind-interfaces");
         cmd.arg(format!("--pid-file={}", self.pidfile().to_str().unwrap()));
-        cmd.arg(format!("--dhcp-hostsdir={}", self.hostsdir().to_str().unwrap()));
+        cmd.arg(format!(
+            "--dhcp-hostsdir={}",
+            self.hostsdir().to_str().unwrap()
+        ));
         //cmd.arg(format!("--dhcp-leasefile={}", self.leasefile().to_str().unwrap()));
         cmd.arg(format!("--conf-file={}", confpath.to_str().unwrap()));
         cmd.arg("--dhcp-range=set:mgmt,172.20.0.2,static,255.255.255.0,30m");
@@ -83,7 +85,7 @@ impl Dnsmasq {
 
         let _ = cmd.spawn();
     }
-    
+
     pub fn stop(&self) {
         self.send_signal(libc::SIGTERM);
     }
@@ -91,11 +93,12 @@ impl Dnsmasq {
     fn send_signal(&self, signal: i32) {
         if self.pidfile().exists() {
             let mut buf = String::new();
-            let mut f = std::fs::File::open(&self.pidfile()).expect("error opening dnsmasq pidfile");
+            let mut f =
+                std::fs::File::open(&self.pidfile()).expect("error opening dnsmasq pidfile");
             f.read_to_string(&mut buf).unwrap();
             let pid = buf.trim().parse::<i32>().unwrap();
 
-            let r = unsafe {libc::kill(pid, signal) }; 
+            let r = unsafe { libc::kill(pid, signal) };
             if r != 0 {
                 panic!("failed to send signal to dnsmasq daemon");
             }

@@ -17,10 +17,10 @@
 
 use std::path::{Path, PathBuf};
 
-use serde::{Serialize, Deserialize};
-use url::Url;
 use hex;
-use sha2::{Sha256, Digest};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use url::Url;
 
 use crate::error::Error;
 use crate::lockfile::LockFile;
@@ -55,15 +55,17 @@ impl ImageRepo {
 
     pub fn add_from_url(&self, url: Url) -> Result<Image, Error> {
         match url.scheme() {
-            "file" => {},
+            "file" => {}
             //"http" | "https" | "file" => {},
-            _ => { return Err(format!("Url scheme not supported: {:?}", url.scheme()).into()) }
+            _ => return Err(format!("Url scheme not supported: {:?}", url.scheme()).into()),
         };
 
         let lf = self.lockfile();
         let _lock = lf.acquire();
         if url.scheme() == "file" {
-            let from_path = url.to_file_path().expect("error converting URL to filepath");
+            let from_path = url
+                .to_file_path()
+                .expect("error converting URL to filepath");
 
             let mut h = Sha256::new();
             let mut f = std::fs::File::open(&from_path)?;
@@ -74,10 +76,10 @@ impl ImageRepo {
             let to_path = self.path.join(&hx);
             if !to_path.exists() {
                 eprintln!("copying new image from {:?} to {:?}", from_path, to_path);
-                std::fs::copy(&from_path, &to_path).expect("error copying image file to repo"); 
+                std::fs::copy(&from_path, &to_path).expect("error copying image file to repo");
             }
 
-            let img = Image{
+            let img = Image {
                 id: hx.clone(),
                 path: to_path,
                 origin: url.to_string(),

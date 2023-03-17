@@ -51,7 +51,7 @@ pub fn to_size(s: &str) -> Result<u64, Error> {
 
     if last == "i" {
         // binary byte mode
-        co = 1024; 
+        co = 1024;
         last = nlast;
         num = &s[..s.len() - 2];
     }

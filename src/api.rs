@@ -19,28 +19,31 @@ use std::path::{Path, PathBuf};
 
 use hex;
 use serde_yaml;
-use sha2::{Sha256, Digest};
-use url::Url;
+use sha2::{Digest, Sha256};
 use tracing::error;
+use url::Url;
 
+use crate::dnsmasq::Dnsmasq;
 use crate::error::Error;
-use crate::models::to_size;
-use crate::models;
 use crate::imagerepo::ImageRepo;
 use crate::libvirt;
+use crate::models;
+use crate::models::to_size;
 use crate::network;
-use crate::dnsmasq::Dnsmasq;
-
 
 mod imgutil {
-    use std::process::Command;
     use std::path::Path;
-    
+    use std::process::Command;
+
     use tracing::debug;
 
     use crate::error::Error;
 
-    pub fn create<P: AsRef<Path>, B: AsRef<Path>>(filepath: P, resize: Option<u64>, backing_file: Option<B>) -> Result<(), Error> {
+    pub fn create<P: AsRef<Path>, B: AsRef<Path>>(
+        filepath: P,
+        resize: Option<u64>,
+        backing_file: Option<B>,
+    ) -> Result<(), Error> {
         let mut cmd = Command::new("/usr/bin/qemu-img");
         cmd.arg("create");
         cmd.arg("-q");
@@ -68,9 +71,7 @@ mod imgutil {
     }
 }
 
-
 pub fn apply_specfile<P: AsRef<Path>>(path: P) -> Result<(), Error> {
-
     let store = Store::new();
 
     let buf = std::fs::read_to_string(path.as_ref())?;
@@ -81,7 +82,9 @@ pub fn apply_specfile<P: AsRef<Path>>(path: P) -> Result<(), Error> {
         if doc.len() > 0 {
             let r = match serde_yaml::from_str::<models::Resource>(&doc) {
                 Ok(r) => r,
-                Err(e) => { return Err(format!("Error reading document at index {}: {}", i, e).into()) },
+                Err(e) => {
+                    return Err(format!("Error reading document at index {}: {}", i, e).into())
+                }
             };
 
             match r {
@@ -93,14 +96,13 @@ pub fn apply_specfile<P: AsRef<Path>>(path: P) -> Result<(), Error> {
                             eprintln!("Failed to create VM: {}", &m.name);
                         }
                     }
-                },
+                }
             }
         }
     }
 
     Ok(())
 }
-
 
 fn create_machine(machine: &mut models::Machine) -> Result<(), Error> {
     // resolve image
@@ -115,7 +117,12 @@ fn create_machine(machine: &mut models::Machine) -> Result<(), Error> {
     let imgpath = s.path_for_machine(&machine.name).join("image.qcow2");
     imgutil::create(
         &imgpath,
-        machine.spec.image.resize.as_ref().map(|s| to_size(s).expect("error parsing size value")),
+        machine
+            .spec
+            .image
+            .resize
+            .as_ref()
+            .map(|s| to_size(s).expect("error parsing size value")),
         Some(image.path),
     )?;
 
@@ -135,7 +142,7 @@ fn create_machine(machine: &mut models::Machine) -> Result<(), Error> {
     // create domain from XML definition
     // start VM
     libvirt::define(&machine, &imgpath, &bridge_name, &netinfo.mac)?;
-   
+
     Ok(())
 }
 
@@ -151,7 +158,7 @@ pub fn delete_machine(id: &str) -> Result<(), Error> {
             return Err(format!("Error while shutting down libvirt domain='{}': {}", id, e).into());
         }
     }
-    if let Err(err)  = network::remove_reservation(&id) {
+    if let Err(err) = network::remove_reservation(&id) {
         error!("error while removing network reservation: {}", err);
     }
     let dnsmasq = Dnsmasq::new();
@@ -179,14 +186,15 @@ pub struct Store {
 
 fn machine_from_file<P: AsRef<Path>>(path: P) -> models::Machine {
     let buf = std::fs::read_to_string(path.as_ref()).expect("error reading spec file");
-    let m = serde_yaml::from_str::<models::Machine>(&buf).expect("error parsing spec file contents");
+    let m =
+        serde_yaml::from_str::<models::Machine>(&buf).expect("error parsing spec file contents");
     m
 }
 
 impl Store {
     pub fn new() -> Self {
         let path = Path::new("/var/lib/bigiron/libvirt");
-        
+
         if !path.exists() {
             std::fs::create_dir_all(path).expect("error creating datastore directory");
         }
@@ -213,7 +221,11 @@ impl Store {
 
     pub fn list_machines(&self) -> Vec<models::Machine> {
         let mut r = Vec::new();
-        for e in self.path.read_dir().expect("error reading data store directories") {
+        for e in self
+            .path
+            .read_dir()
+            .expect("error reading data store directories")
+        {
             if let Ok(entry) = e {
                 let m = machine_from_file(&entry.path().join("spec.yaml"));
                 r.push(m);
@@ -223,7 +235,6 @@ impl Store {
     }
 
     pub fn add_machine(&self, machine: &models::Machine) -> Result<(), Error> {
-
         if self.get_machine(&machine.name).is_some() {
             return Err("Machine with name already exists".into());
         }
@@ -240,7 +251,7 @@ impl Store {
 
     pub fn remove_machine(&self, id: &str) -> Result<(), Error> {
         if self.get_machine(id).is_none() {
-            return Err(format!("No machine with id='{}'", id).into())
+            return Err(format!("No machine with id='{}'", id).into());
         }
 
         let mp = self.path.join(get_unique_id(id));

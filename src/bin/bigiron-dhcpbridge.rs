@@ -31,17 +31,17 @@ struct Cli {
 #[derive(Subcommand, Debug)]
 enum Commands {
     Init,
-    Add{
+    Add {
         mac: String,
         addr: String,
         hostname: Option<String>,
     },
-    Old{
+    Old {
         mac: String,
         addr: String,
         hostname: Option<String>,
     },
-    Del{
+    Del {
         mac: String,
         addr: String,
         hostname: Option<String>,
@@ -57,16 +57,27 @@ fn main() {
     eprintln!("{:?}", cli);
 
     match cli.command {
-        Commands::Init => {
-        },
-        Commands::Add{mac, addr, hostname} => {
+        Commands::Init => {}
+        Commands::Add {
+            mac,
+            addr,
+            hostname,
+        } => {
             network::add_lease(&mac, &addr, hostname);
-        },
-        Commands::Old{mac, addr, hostname} => {
+        }
+        Commands::Old {
+            mac,
+            addr,
+            hostname,
+        } => {
             network::add_lease(&mac, &addr, hostname);
-        },
-        Commands::Del{mac, addr, hostname} => {
+        }
+        Commands::Del {
+            mac,
+            addr,
+            hostname,
+        } => {
             network::del_lease(&mac, &addr, hostname);
-        },
+        }
     }
 }

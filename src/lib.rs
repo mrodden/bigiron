@@ -22,9 +22,9 @@ pub mod vm;
 pub mod api;
 pub mod models;
 
-pub mod lockfile;
 pub mod imagerepo;
+pub mod lockfile;
 
-pub mod libvirt;
 pub mod dnsmasq;
+pub mod libvirt;
 pub mod network;

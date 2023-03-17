@@ -15,16 +15,16 @@
 //  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
 //  USA
 
+use std::fs::File;
 use std::net::Ipv4Addr;
 use std::path::Path;
-use std::fs::File;
 
-use tracing::warn;
 use hex;
-use rand::{thread_rng, Rng};
 use ipnet::Ipv4Net;
+use rand::{thread_rng, Rng};
+use serde::{Deserialize, Serialize};
 use serde_yaml;
-use serde::{Serialize, Deserialize};
+use tracing::warn;
 
 use crate::error::Error;
 use crate::lockfile::{LockFile, LockFileGuard};
@@ -67,7 +67,9 @@ pub fn generate_mac() -> String {
     let mut rng = thread_rng();
 
     let mac: [u8; 6] = [
-        0x00, 0x16, 0x3e,
+        0x00,
+        0x16,
+        0x3e,
         rng.gen_range(0x00..0x7f),
         rng.gen_range(0x00..0xff),
         rng.gen_range(0x00..0xff),
@@ -83,15 +85,19 @@ pub fn new_reservation(hostname: &str) -> NetInfo {
     // acquire lockfile
     let lf = LockFile::new("/var/lib/bigiron/netstate.lock");
     let _lock = lf.acquire();
- 
+
     // read any current state or create new
     let mut netstate = match np.exists() {
-        true => { NetState::from_file(&np) },
-        false => {         NetState::new()        },
+        true => NetState::from_file(&np),
+        false => NetState::new(),
     };
 
     // return a reservations for this hostname if it already exists
-    if let Some(netinfo) = netstate.reservations.iter_mut().find(|x| x.hostname == hostname) {
+    if let Some(netinfo) = netstate
+        .reservations
+        .iter_mut()
+        .find(|x| x.hostname == hostname)
+    {
         netinfo.allocated = true;
         let res = netinfo.clone();
         netstate.save(&np);
@@ -141,7 +147,7 @@ pub fn new_reservation(hostname: &str) -> NetInfo {
     }
 
     // insert reservation, write to disk
-    let new_res = NetInfo{
+    let new_res = NetInfo {
         mac: mac,
         ip: free.unwrap().to_string(),
         hostname: hostname.to_string(),
@@ -155,7 +161,10 @@ pub fn new_reservation(hostname: &str) -> NetInfo {
     new_res
 }
 
-fn get_netstate_locked<'a, P: AsRef<Path>>(path: P, lf: &'a LockFile) -> (NetState, LockFileGuard<'a>) {
+fn get_netstate_locked<'a, P: AsRef<Path>>(
+    path: P,
+    lf: &'a LockFile,
+) -> (NetState, LockFileGuard<'a>) {
     if !path.as_ref().exists() {
         panic!("no netstate file found");
     }
@@ -184,14 +193,12 @@ pub fn remove_reservation(hostname: &str) -> Result<(), Error> {
             let _ = netstate.reservations.remove(i);
         }
         netstate.save(&np);
-    } 
-    else {
+    } else {
         warn!("no reservation for {} found to remove", hostname);
     }
 
     Ok(())
 }
-
 
 pub fn add_lease(mac: &str, addr: &str, hostname: Option<String>) {
     let np = Path::new("/var/lib/bigiron/netstate");
@@ -202,20 +209,27 @@ pub fn add_lease(mac: &str, addr: &str, hostname: Option<String>) {
     if let Some(netinfo) = netstate.reservations.iter_mut().find(|x| x.ip == addr) {
         netinfo.leased = true;
         if netinfo.mac != mac {
-            warn!("new lease mac='{}' didn't match reservation='{:?}'", mac, netinfo);
+            warn!(
+                "new lease mac='{}' didn't match reservation='{:?}'",
+                mac, netinfo
+            );
         }
         if hostname.is_some() && netinfo.hostname != hostname.as_ref().unwrap().as_str() {
-            warn!("new lease hostname='{}' didn't match reservation='{:?}'", hostname.unwrap(), netinfo);
+            warn!(
+                "new lease hostname='{}' didn't match reservation='{:?}'",
+                hostname.unwrap(),
+                netinfo
+            );
         }
     } else {
         // create a reservation so we don't try to use the IP
-        
+
         let host = match hostname {
             Some(name) => name.to_string(),
             None => String::new(),
         };
 
-        let new_res = NetInfo{
+        let new_res = NetInfo {
             mac: mac.to_string(),
             ip: addr.to_string(),
             hostname: host,
@@ -248,7 +262,7 @@ pub fn del_lease(_mac: &str, addr: &str, _hostname: Option<String>) {
         }
 
         netstate.save(&np);
-    } 
+    }
 }
 
 #[cfg(test)]

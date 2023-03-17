@@ -42,11 +42,12 @@ impl LockFile {
     }
 
     pub fn acquire(&self) -> LockFileGuard {
-
         loop {
             match std::fs::create_dir(&self.path) {
                 Ok(_) => break,
-                Err(_) => { info!("Blocked on acquiring lockfile {:?}", self.path) },
+                Err(_) => {
+                    info!("Blocked on acquiring lockfile {:?}", self.path)
+                }
             }
 
             let dur = std::time::Duration::from_millis(1);
@@ -56,14 +57,16 @@ impl LockFile {
         // write PID to file inside directory to indicate who has the lock
         let pid = std::process::id();
         let buf = pid.to_string();
-        std::fs::write(self.path.join("pid"), buf.as_bytes()).expect("error writing PID to lockfile");
+        std::fs::write(self.path.join("pid"), buf.as_bytes())
+            .expect("error writing PID to lockfile");
 
-        LockFileGuard{lf: self}
+        LockFileGuard { lf: self }
     }
 
     fn release(&self) {
-        // remove pid file 
-        std::fs::remove_file(self.path.join("pid")).expect("error while unlinking pid file for lockfile");
+        // remove pid file
+        std::fs::remove_file(self.path.join("pid"))
+            .expect("error while unlinking pid file for lockfile");
 
         // remove directory (i.e. the lock)
         std::fs::remove_dir(&self.path).expect("error while removing lockfile");
